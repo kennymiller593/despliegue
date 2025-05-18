@@ -1,4 +1,4 @@
-name: Deploy Laravel to cPanel
+name: Deploy via FTP
 
 on:
   push:
@@ -13,36 +13,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Paso 2: Configurar PHP
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          extensions: mbstring, ctype, fileinfo, openssl, PDO, tokenizer, xml, gd, mysqli
-          tools: composer:v2
-
-      # Paso 3: Instalar dependencias
+      # Paso 2: Instalar dependencias
       - name: Install dependencies
         run: |
-          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          composer install --no-dev --optimize-autoloader
           npm install
           npm run build
+          rm -rf node_modules  # Elimina para no subir archivos innecesarios
 
-      # Paso 4: Configurar SSH
-      - name: Add SSH Private Key
-        uses: webfactory/ssh-agent@v0.9.0
+      # Paso 3: Desplegar vía FTP
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      # Paso 5: Desplegar en cPanel
-      - name: Deploy via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            cd ~/invmaranionfym &&
-            git fetch origin main &&
-            git reset --hard origin/main &&
-            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev &&
-            php artisan storage:link &&
-            php artisan optimize:clear &&
-            chmod -R 755 storage bootstrap/cache
-          "
+          server: invmaranionfym.miagronegocio.com  # Usa tu subdominio como servidor FTP
+          username: ${{ secrets.FTP_USER }}          # agrovet@invmaranionfym.miagronegocio.com
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./                              # Directorio local a subir
+          server-dir: /agrovet/                      # Ruta relativa desde tu directorio FTP
+          exclude: |
+            .env
+            .git/
+            .github/
+            storage/framework/cache/**
+          dangerous-clean-slate: false               # ¡Cuidado! True borra archivos no versionados
