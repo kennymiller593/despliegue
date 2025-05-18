@@ -1,4 +1,4 @@
-name: Deploy via FTP
+name: Deploy via SFTP
 
 on:
   push:
@@ -6,27 +6,29 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # Paso 1: Checkout del código
+      - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Paso 2: Instalar dependencias
       - name: Install dependencies
         run: |
           composer install --no-dev --optimize-autoloader
           npm install
           npm run build
+          rm -rf node_modules  # No subir esta carpeta
 
-      - name: FTP Deploy
-        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+      # Paso 3: Desplegar vía SFTP (¡Clave aquí!)
+      - name: SFTP Deploy
+        uses: wlixcc/SFTP-Deploy-Action@v1.0
         with:
-          server: invmaranionfym.miagronegocio.com
+          host: 'invmaranionfym.miagronegocio.com'
+          port: '22'  # Puerto SFTP estándar
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
-          server-dir: /agrovet/
-          exclude: |
-            .env
-            .gitignore
-            node_modules/
+          localPath: './'
+          remotePath: '/home/miagrone/invmaranionfym.miagronegocio.com/'
+          args: '-avz --delete'  # Habilita compresión y sincronización eficiente
