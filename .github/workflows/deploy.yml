@@ -6,33 +6,27 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
-      # Paso 1: Descargar el código
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Paso 2: Instalar dependencias
       - name: Install dependencies
         run: |
           composer install --no-dev --optimize-autoloader
           npm install
           npm run build
-          rm -rf node_modules  # Elimina para no subir archivos innecesarios
 
-      # Paso 3: Desplegar vía FTP
       - name: FTP Deploy
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
         with:
-          server: invmaranionfym.miagronegocio.com  # Usa tu subdominio como servidor FTP
-          username: ${{ secrets.FTP_USER }}          # agrovet@invmaranionfym.miagronegocio.com
+          server: invmaranionfym.miagronegocio.com
+          username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./                              # Directorio local a subir
-          server-dir: /agrovet/                      # Ruta relativa desde tu directorio FTP
+          local-dir: ./
+          server-dir: /agrovet/
           exclude: |
             .env
-            .git/
-            .github/
-            storage/framework/cache/**
-          dangerous-clean-slate: false               # ¡Cuidado! True borra archivos no versionados
+            .gitignore
+            node_modules/
