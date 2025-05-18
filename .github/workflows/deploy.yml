@@ -1,35 +1,48 @@
-name:  Despliegue a subdominio via SSH
+name: Deploy to cPanel
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Configurar clave SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    # Paso 1: Checkout del código
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name:  Desplegar código al servidor por SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd /home/miagrone/invmaranionfym.miagronegocio.com
+    # Paso 2: Configurar PHP
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, ctype, fileinfo, openssl, PDO, tokenizer, xml, gd, mysqli
+        tools: composer:v2
 
-            # Si ya está inicializado como repo, hacemos pull
-            if [ -d .git ]; then
-              git reset --hard
-              git clean -fd
-              git pull origin main
-            else
-              git clone https://github.com/kennymiller593/despliegue.git .
-            fi
+    # Paso 3: Instalar dependencias de Composer y NPM
+    - name: Install dependencies
+      run: |
+        composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+        npm install
+        npm run build
 
-            composer install --no-dev --optimize-autoloader
-            npm install
-            npm run build
-          EOF
+    # Paso 4: Configurar SSH
+    - name: Add SSH Private Key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    # Paso 5: Desplegar en cPanel
+    - name: Deploy to cPanel
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          cd /home/miagrone/invmaranionfym 
+          git pull origin main &&
+          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev &&
+          php artisan storage:link &&
+          php artisan optimize:clear &&
+          chmod -R 755 storage &&
+          chmod -R 755 bootstrap/cache
+        "
