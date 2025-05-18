@@ -34,7 +34,7 @@ jobs:
         uses: wlixcc/SFTP-Deploy-Action@v1.0
         with:
           server: 'invmaranionfym.miagronegocio.com'  # ¡Usa 'server' en lugar de 'host'!
-          port: '22'
+          port: '21'
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
           local_path: './'
