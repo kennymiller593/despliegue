@@ -25,7 +25,7 @@
          <a href="{{ route('verProducto') }}">
              <button
                  class="p-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50">
-                 <span class="font-bold">Artículos de</span>
+                 <span class="font-bold">Artículos</span>
              </button>
          </a>
 

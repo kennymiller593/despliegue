@@ -1,0 +1,25 @@
+name: Deploy to Subdomain
+on:
+  push:
+    branches: [ main ]  # Cambia a "master" si es tu rama principal
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: "miagronegocio.com"  # Usa el dominio principal (no el subdominio)
+          username: "miagrone"        # Usuario de cPanel (sin dominio)
+          key: ${{ secrets.CPANEL_SSH_KEY }}
+          port: 22
+          script: |
+            cd /home/miagrone/invmaranionfym.miagronegocio.com  # Ruta exacta del subdominio
+            git pull origin main
+            # Opcional: Limpiar caché o reinstalar dependencias
+            # rm -rf cache/*
+            # npm install --production
