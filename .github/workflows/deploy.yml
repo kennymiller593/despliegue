@@ -37,7 +37,7 @@ jobs:
       # Paso 5: Desplegar en cPanel
       - name: Deploy via SSH
         run: |
-          ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          ssh -o StrictHostKeyChecking=no -p 22 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             cd ~/invmaranionfym &&
             git fetch origin main &&
             git reset --hard origin/main &&
