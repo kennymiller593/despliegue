@@ -1,25 +1,35 @@
-name: Deploy to Subdomain
+name:  Despliegue a subdominio via SSH
+
 on:
   push:
-    branches: [ main ]  # Cambia a "master" si es tu rama principal
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+    steps:
+      - name: Configurar clave SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: "miagronegocio.com"  # Usa el dominio principal (no el subdominio)
-          username: "miagrone"        # Usuario de cPanel (sin dominio)
-          key: ${{ secrets.CPANEL_SSH_KEY }}
-          port: 80
-          script: |
-            cd /home/miagrone/invmaranionfym.miagronegocio.com  # Ruta exacta del subdominio
-            git pull origin main
-            # Opcional: Limpiar caché o reinstalar dependencias
-            # rm -rf cache/*
-            # npm install --production
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name:  Desplegar código al servidor por SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            cd /home/miagrone/invmaranionfym.miagronegocio.com
+
+            # Si ya está inicializado como repo, hacemos pull
+            if [ -d .git ]; then
+              git reset --hard
+              git clean -fd
+              git pull origin main
+            else
+              git clone https://github.com/kennymiller593/despliegue.git .
+            fi
+
+            composer install --no-dev --optimize-autoloader
+            npm install
+            npm run build
+          EOF
