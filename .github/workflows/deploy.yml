@@ -1,4 +1,4 @@
-name: Deploy via SFTP
+name: Deploy Laravel to cPanel (SFTP)
 
 on:
   push:
@@ -13,22 +13,43 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Paso 2: Instalar dependencias
+      # Paso 2: Configurar PHP 8.2 (compatible con tus paquetes)
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'  # Versión compatible con lcobucci/clock y nette/*
+          extensions: mbstring, ctype, fileinfo, openssl, PDO, tokenizer, xml, gd, mysqli
+          tools: composer:v2
+
+      # Paso 3: Instalar dependencias (con --ignore-platform-reqs para evitar conflictos)
       - name: Install dependencies
         run: |
-          composer install --no-dev --optimize-autoloader
+          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
           npm install
           npm run build
-          rm -rf node_modules  # No subir esta carpeta
+          rm -rf node_modules
 
-      # Paso 3: Desplegar vía SFTP (¡Clave aquí!)
+      # Paso 4: Desplegar vía SFTP (más rápido y seguro que FTP)
       - name: SFTP Deploy
         uses: wlixcc/SFTP-Deploy-Action@v1.0
         with:
           host: 'invmaranionfym.miagronegocio.com'
-          port: '22'  # Puerto SFTP estándar
-          username: ${{ secrets.FTP_USER }}
+          port: '22'
+          username: ${{ secrets.FTP_USER }}  # Ej: miagrone@invmaranionfym.miagronegocio.com
           password: ${{ secrets.FTP_PASSWORD }}
           localPath: './'
           remotePath: '/home/miagrone/invmaranionfym.miagronegocio.com/'
-          args: '-avz --delete'  # Habilita compresión y sincronización eficiente
+          args: '-avz --delete'  # Sincronización eficiente
+          exclude: |
+            .env
+            .git/
+            .github/
+            storage/framework/cache/**
+
+      # Paso 5: Optimizar Laravel en el servidor (opcional)
+      - name: Post-Deploy Commands
+        run: |
+          ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd /home/miagrone/invmaranionfym.miagronegocio.com &&
+            php artisan optimize:clear
+          "
