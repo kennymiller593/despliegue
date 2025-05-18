@@ -1,4 +1,4 @@
-name: Deploy Laravel to cPanel (SFTP)
+name: Deploy Laravel via SFTP
 
 on:
   push:
@@ -9,47 +9,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Paso 1: Checkout del código
+      # --- PASO 1: Preparación del código ---
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Paso 2: Configurar PHP 8.2 (compatible con tus paquetes)
+      # --- PASO 2: Configurar PHP 8.2 (compatible con tus paquetes) ---
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'  # Versión compatible con lcobucci/clock y nette/*
+          php-version: '8.2'
           extensions: mbstring, ctype, fileinfo, openssl, PDO, tokenizer, xml, gd, mysqli
           tools: composer:v2
 
-      # Paso 3: Instalar dependencias (con --ignore-platform-reqs para evitar conflictos)
+      # --- PASO 3: Instalar dependencias ---
       - name: Install dependencies
         run: |
           composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
           npm install
           npm run build
-          rm -rf node_modules
+          rm -rf node_modules .env
 
-      # Paso 4: Desplegar vía SFTP (más rápido y seguro que FTP)
+      # --- PASO 4: Despliegue via SFTP (versión corregida) ---
       - name: SFTP Deploy
         uses: wlixcc/SFTP-Deploy-Action@v1.0
         with:
-          host: 'invmaranionfym.miagronegocio.com'
+          server: 'invmaranionfym.miagronegocio.com'  # ¡Usa 'server' en lugar de 'host'!
           port: '22'
-          username: ${{ secrets.FTP_USER }}  # Ej: miagrone@invmaranionfym.miagronegocio.com
+          username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASSWORD }}
-          localPath: './'
-          remotePath: '/home/miagrone/invmaranionfym.miagronegocio.com/'
-          args: '-avz --delete'  # Sincronización eficiente
-          exclude: |
-            .env
-            .git/
-            .github/
-            storage/framework/cache/**
-
-      # Paso 5: Optimizar Laravel en el servidor (opcional)
-      - name: Post-Deploy Commands
+          local_path: './'
+          remote_path: '/home/miagrone/invmaranionfym.miagronegocio.com/'
+          args: '-av'  # Sin -z (no compatible)
+        
+      # --- PASO 5: Comandos post-despliegue (opcional) ---
+      - name: Run Post-Deploy Commands
+        if: always()
         run: |
-          ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            cd /home/miagrone/invmaranionfym.miagronegocio.com &&
-            php artisan optimize:clear
-          "
+          echo "✅ Despliegue completado. Ejecuta manualmente en el servidor:"
+          echo "cd /home/miagrone/invmaranionfym.miagronegocio.com"
+          echo "php artisan optimize:clear"
