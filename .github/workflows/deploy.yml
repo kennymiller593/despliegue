@@ -1,50 +1,43 @@
-name: Deploy Laravel via SFTP
+
+name: Deploy Laravel to Shared Hosting
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]  # O la rama que uses como principal
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # --- PASO 1: Preparación del código ---
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # --- PASO 2: Configurar PHP 8.2 (compatible con tus paquetes) ---
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Deploy to shared hosting via SSH
+        uses: appleboy/ssh-action@master
         with:
-          php-version: '8.2'
-          extensions: mbstring, ctype, fileinfo, openssl, PDO, tokenizer, xml, gd, mysqli
-          tools: composer:v2
-
-      # --- PASO 3: Instalar dependencias ---
-      - name: Install dependencies
-        run: |
-          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --ignore-platform-reqs
-          npm install
-          npm run build
-          rm -rf node_modules .env
-
-      # --- PASO 4: Despliegue via SFTP (versión corregida) ---
-      - name: SFTP Deploy
-        uses: wlixcc/SFTP-Deploy-Action@v1.0
-        with:
-          server: 'invmaranionfym.miagronegocio.com'  # ¡Usa 'server' en lugar de 'host'!
-          port: '21'
-          username: ${{ secrets.FTP_USER }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './'
-          remote_path: '/home/miagrone/invmaranionfym.miagronegocio.com/'
-          args: '-av'  # Sin -z (no compatible)
-        
-      # --- PASO 5: Comandos post-despliegue (opcional) ---
-      - name: Run Post-Deploy Commands
-        if: always()
-        run: |
-          echo "✅ Despliegue completado. Ejecuta manualmente en el servidor:"
-          echo "cd /home/miagrone/invmaranionfym.miagronegocio.com"
-          echo "php artisan optimize:clear"
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navegar al directorio del proyecto
+            cd /home/miagrone/invmaranionyfm.miagronegocio.com
+            
+            # Realizar pull desde GitHub
+            git pull origin main
+            
+            # Instalar dependencias de Composer
+            composer install --no-dev --optimize-autoloader
+            
+            # Instalar dependencias de NPM
+            npm install
+            
+            # Compilar assets (Tailwind CSS)
+            npm run build
+            
+            # Tareas de Laravel post-despliegue
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            
+            # Corregir permisos si es necesario
+            chmod -R 755 .
+            chmod -R 777 storage
+            chmod -R 777 bootstrap/cache
