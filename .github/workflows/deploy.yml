@@ -1,43 +1,47 @@
-
-name: Deploy Laravel to Shared Hosting
+name: Deploy to invmaranionfym.miagronegocio.com
 
 on:
   push:
-    branches: [ main ]  # O la rama que uses como principal
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Deploy to shared hosting via SSH
+      # Paso 1: Checkout del código
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Paso 2: Configurar PHP
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, ctype, fileinfo, openssl, PDO, tokenizer, xml, gd, mysqli
+
+      # Paso 3: Instalar dependencias
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          npm install
+          npm run build
+
+      # Paso 4: Configurar SSH
+      - name: Add SSH Private Key
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # Navegar al directorio del proyecto
-            cd /home/miagrone/invmaranionyfm.miagronegocio.com
-            
-            # Realizar pull desde GitHub
-            git pull origin main
-            
-            # Instalar dependencias de Composer
-            composer install --no-dev --optimize-autoloader
-            
-            # Instalar dependencias de NPM
-            npm install
-            
-            # Compilar assets (Tailwind CSS)
-            npm run build
-            
-            # Tareas de Laravel post-despliegue
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            
-            # Corregir permisos si es necesario
-            chmod -R 755 .
-            chmod -R 777 storage
-            chmod -R 777 bootstrap/cache
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Paso 5: Desplegar
+      - name: Deploy to Server
+        run: |
+          ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd /home/miagrone/invmaranionfym.miagronegocio.com &&
+            git pull origin main &&
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev &&
+            php artisan migrate --force &&
+            php artisan storage:link &&
+            php artisan optimize:clear &&
+            chmod -R 755 storage bootstrap/cache
+          "
