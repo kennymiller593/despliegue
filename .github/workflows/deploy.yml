@@ -33,10 +33,10 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # Paso 5: Desplegar
+      # Paso 5: Desplegar (sin especificar puerto)
       - name: Deploy to Server
         run: |
-          ssh -o StrictHostKeyChecking=no -p 2222 ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             cd /home/miagrone/invmaranionfym.miagronegocio.com &&
             git pull origin main &&
             composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev &&
